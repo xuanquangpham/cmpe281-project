@@ -11,7 +11,7 @@ team account to access to vCenter server:
 
 https://130.65.159.14:9443/vsphere-client/
 
-cmpe281_sec3_team9@vsphere.local/pwd <you already know>
+cmpe281_sec3_team9@vsphere.local/pwd (you already know)
 
 team workspace is a folder under "CMPE 281 SEC3/team9".
 
@@ -21,4 +21,4 @@ ESXi host 1 (team9-esxi555-1): 130.65.159.153
 ESXi host 2 (team9-esxi555-2): 130.65.159.198
 
 user name: root
-password: <you already know>
+password: (you already know)
