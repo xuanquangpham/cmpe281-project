@@ -2,7 +2,11 @@
 
 Task: https://docs.google.com/document/d/1dlsoB8p5n03br0nUwz1BRbgCEcTPXxZHEVwbLUlg7kg/edit
 
+
+
 team account to access to vCenter server:
+
+https://130.65.159.14:9443/vsphere-client/
 
 cmpe281_sec3_team9@vsphere.local/pwd: cmpe-ul4x
 
