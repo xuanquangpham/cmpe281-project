@@ -1,6 +1,8 @@
 # cmpe281-project
 
-Task: https://docs.google.com/document/d/1dlsoB8p5n03br0nUwz1BRbgCEcTPXxZHEVwbLUlg7kg/edit
+Proposal: https://docs.google.com/document/d/1dlsoB8p5n03br0nUwz1BRbgCEcTPXxZHEVwbLUlg7kg/edit
+
+Tasks: https://docs.google.com/spreadsheets/d/1Hs2aplWfruGNG0_unR-fIykb7AY3VIQEcdvdisGIn5o/edit?usp=sharing
 
 Summary: "I assume your plan is to install ESXi as a VM on CMPE vCenter server env, and you have two such "ESXi VMs".
 - On top of each ESXi VM, you will install 3~5 VMs.
