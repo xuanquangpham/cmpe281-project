@@ -5,6 +5,7 @@ import java.net.URL;
 import com.vmware.vim25.*;
 import com.vmware.vim25.mo.*;
 import java.rmi.RemoteException;
+import java.text.DecimalFormat;
 import java.util.Scanner;
 
 
@@ -31,18 +32,41 @@ public class Algorithm {
 		
 	}
 	
-	private void printHostsAndVMs() throws RemoteException{
+	public void printHostsAndVMs() throws RemoteException{
 		Folder rootFolder = si.getRootFolder();
 		ManagedEntity[] mes = new InventoryNavigator(rootFolder).searchManagedEntities("HostSystem");
 		for(int i = 0; i < mes.length; i++){
 			HostSystem hs = (HostSystem)mes[i];
-			int usedCpu = hs.getSummary().getQuickStats().getOverallCpuUsage();
-			System.out.println("Host: " + hs.getName() + ", CPU usage: " + usedCpu);
+			System.out.println("Host: " + hs.getName() + ", <<CPU usage = " + getHostCpuUsagePecentage(hs) + "% - " +
+										"Memory usage = " + getHostMemoryUsagePecentage(hs) + "%>>");
 			VirtualMachine[] vms = hs.getVms();
 			for(int j =0 ;j < vms.length; j++){
-				System.out.println("\tVM " + j + " = " + vms[j].getName() + " Power state: " + vms[j].getRuntime().getPowerState());
+				System.out.println("\tVM " + j + ": <" + vms[j].getName() + "> - Power state: " + vms[j].getRuntime().getPowerState());
 			}
+	
+			System.out.println();
 		}
+		System.out.println("\n\nHit ENTER to quit");
+	}
+
+	public double getHostCpuUsagePecentage(HostSystem hs) {
+		int numOfCores = hs.getSummary().getHardware().getNumCpuCores();
+		int cpuMhz = hs.getSummary().getHardware().getCpuMhz();
+		int usedCpuMhz = hs.getSummary().getQuickStats().getOverallCpuUsage();
+		double percent = (usedCpuMhz / (double)(numOfCores * cpuMhz)) * 100;
+		
+		DecimalFormat df = new DecimalFormat("####0.00");
+		return Double.valueOf(df.format(percent));
+	}
+	
+	public double getHostMemoryUsagePecentage(HostSystem hs) {
+		double mem = hs.getSummary().getHardware().getMemorySize() / (1024 * 1024);
+        int usedMem = hs.getSummary().getQuickStats().getOverallMemoryUsage();
+        double percent = (usedMem / mem) * 100;
+		
+		
+		DecimalFormat df = new DecimalFormat("####0.00");
+		return Double.valueOf(df.format(percent));
 	}
 	
 	private void setCPUThreshold(){
@@ -77,7 +101,7 @@ public class Algorithm {
 		scanner.close();
 	}
 	
-	private void closeConnection(){
+	public void closeConnection(){
 		si.getServerConnection().logout();
 	}
 	
