@@ -23,6 +23,8 @@ ESXi host 1 (team9-esxi555-1): 130.65.159.153
 ESXi host 2 (team9-esxi555-2): 130.65.159.198
 
 VCenter (team9-vcsa): 130.65.159.177 - root/pwd(same as other)
++ https://130.65.159.177:9443/vsphere-client/
++ https://130.65.159.177:5480/#core.Login
 
 VM Client 1 (team9-ub-1505): 130.65.159.19 - root/pwd(same as other)
 
