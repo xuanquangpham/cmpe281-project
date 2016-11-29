@@ -1,4 +1,5 @@
 package team9;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -32,16 +33,11 @@ public class Algorithm {
 		
 	}
 	
-<<<<<<< HEAD
 	public void printHostsAndVMs() throws RemoteException{
-=======
-	private void printHostsAndVMs() throws RemoteException{
->>>>>>> origin/master
 		Folder rootFolder = si.getRootFolder();
 		ManagedEntity[] mes = new InventoryNavigator(rootFolder).searchManagedEntities("HostSystem");
 		for(int i = 0; i < mes.length; i++){
 			HostSystem hs = (HostSystem)mes[i];
-<<<<<<< HEAD
 			System.out.println("Host: " + hs.getName() + ", <<CPU usage = " + getHostCpuUsagePecentage(hs) + "% - " +
 										"Memory usage = " + getHostMemoryUsagePecentage(hs) + "%>>");
 			VirtualMachine[] vms = hs.getVms();
@@ -51,9 +47,8 @@ public class Algorithm {
 	
 			System.out.println();
 		}
-		System.out.println("\n\nHit ENTER to quit");
 	}
-
+	
 	public double getHostCpuUsagePecentage(HostSystem hs) {
 		int numOfCores = hs.getSummary().getHardware().getNumCpuCores();
 		int cpuMhz = hs.getSummary().getHardware().getCpuMhz();
@@ -123,66 +118,6 @@ public class Algorithm {
 		}
 	}
 	
-=======
-			int usedCpu = hs.getSummary().getQuickStats().getOverallCpuUsage();
-			System.out.println("Host: " + hs.getName() + ", CPU usage: " + usedCpu);
-			VirtualMachine[] vms = hs.getVms();
-			for(int j =0 ;j < vms.length; j++){
-				System.out.println("\tVM " + j + " = " + vms[j].getName() + " Power state: " + vms[j].getRuntime().getPowerState());
-			}
-		}
-	}
-	
-	private void setCPUThreshold(){
-		System.out.println("Enter cpu threshold: ");
-		Scanner scanner = new Scanner(System.in);
-		cpuThreshold = scanner.nextInt();
-		scanner.close();
-	}
-	
-	private void run() throws RemoteException, InterruptedException {
-		Integer choice;
-		Scanner scanner = new Scanner(System.in);
-		do{
-			System.out.println("0. Print all hosts and their respective virtual machines\n"
-					+ "1. Migrate a virtual machine\n"
-					+ "2. Set cpu threshold");
-			choice = scanner.nextInt();
-			switch(choice){
-			case 0:
-				printHostsAndVMs();
-				break;
-			case 1:
-				migrate(scanner);
-				break;
-			case 2:
-				setCPUThreshold();
-				break;
-			default:
-				break;
-			}
-		}while(choice != 9);
-		scanner.close();
-	}
-	
-	private void closeConnection(){
-		si.getServerConnection().logout();
-	}
-	
-	public Algorithm(String IP, String login, String password){
-		System.out.println("IP: " + IP);
-		try{
-			si = new ServiceInstance(new URL("https://" + IP + "/sdk"), login, password, true);
-		} catch (RemoteException e){
-			System.err.println("RemoteException: " + e.getMessage());
-			System.exit(1);
-		} catch (MalformedURLException e){
-			System.err.println("MalformedURLException: " + e.getMessage());
-			System.exit(1);
-		}
-	}
-	
->>>>>>> origin/master
 	public static void main(String[] args) throws Exception
 	{
         Algorithm algorithm = new Algorithm(args[0], args[1], args[2]);
