@@ -13,6 +13,7 @@ import java.util.Scanner;
 public class Algorithm {
 	ServiceInstance si;
 	Integer cpuThreshold;
+	Integer migrationThreshold;
 	
 	private void migrate(Scanner scanner) throws RemoteException, InterruptedException{
 		Integer currentHost;
@@ -69,11 +70,27 @@ public class Algorithm {
 		return Double.valueOf(df.format(percent));
 	}
 	
-	private void setCPUThreshold(){
+	private void setCPUThreshold(Scanner scanner){
 		System.out.println("Enter cpu threshold: ");
-		Scanner scanner = new Scanner(System.in);
 		cpuThreshold = scanner.nextInt();
-		scanner.close();
+	}
+	
+	private void setMigrationThreshold(Scanner scanner){
+		System.out.print("Enter migration threshold: [1-5] (1 being more conservative, 5 being more aggressive: ");
+		migrationThreshold = scanner.nextInt();
+	}
+	
+	private void printDRSClusters() throws RemoteException{
+		Folder rootFolder = si.getRootFolder();
+		ManagedEntity[] mes = new InventoryNavigator(rootFolder).searchManagedEntities("ClusterComputeResource");
+		for(int i = 0; i < mes.length; i++){
+			ClusterComputeResource cluster = (ClusterComputeResource)mes[i];
+			System.out.println("Cluster[" + i + "]: " + cluster.getName());
+			ClusterComputeResourceSummary ccrs = (ClusterComputeResourceSummary)cluster.getSummary();
+			System.out.println("\tCluster's current balance: " + ccrs.getCurrentBalance());
+			System.out.println("\tCluster's target balance: " + ccrs.getTargetBalance());
+			System.out.println("\tCluster's number of vMotions: " + ccrs.getNumVmotions());
+		}
 	}
 	
 	private void run() throws RemoteException, InterruptedException {
@@ -82,7 +99,9 @@ public class Algorithm {
 		do{
 			System.out.println("0. Print all hosts and their respective virtual machines\n"
 					+ "1. Migrate a virtual machine\n"
-					+ "2. Set cpu threshold");
+					+ "2. Set cpu threshold\n"
+					+ "3. Set migration threshold\n"
+					+ "4. Get all clusters");
 			choice = scanner.nextInt();
 			switch(choice){
 			case 0:
@@ -92,7 +111,13 @@ public class Algorithm {
 				migrate(scanner);
 				break;
 			case 2:
-				setCPUThreshold();
+				setCPUThreshold(scanner);
+				break;
+			case 3:
+				setMigrationThreshold(scanner);
+				break;
+			case 4:
+				printDRSClusters();
 				break;
 			default:
 				break;
