@@ -12,7 +12,7 @@ public class HostStatus {
 			System.out.print("\033[H\033[2J");
 			System.out.flush();
 			instance.printHostsAndVMs();
-			Thread.sleep(5000);
+			Thread.sleep(20000);
 		}
 		
 		instance.closeConnection();
