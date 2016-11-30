@@ -1,0 +1,15 @@
+3 hosts, migration threshold 5: targetbalance = 40
+3 hosts, migration threshold 4: targetbalance = 81
+3 hosts, migration threshold 3: targetbalance = 163
+3 hosts, migration threshold 2: targetbalance = 244
+3 hosts, migration threshold 1: targetbalance = -1000
+
+4 hosts, migration threshold 5: targetbalance = 35
+4 hosts, migration threshold 4: targetbalance = 70
+4 hosts, migration threshold 3: targetbalance = 141
+4 hosts, migration threshold 2: targetbalance = 212
+
+5 hosts, migration threshold 5: targetbalance = 31
+5 hosts, migration threshold 4: targetbalance = 63
+5 hosts, migration threshold 3: targetbalance = 126
+5 hosts, migration threshold 2: targetbalance = 189

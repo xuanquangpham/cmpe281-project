@@ -10,7 +10,7 @@ import java.text.DecimalFormat;
 import java.util.Scanner;
 
 
-public class Algorithm {
+public class Algorithm{
 	ServiceInstance si;
 	Integer cpuThreshold;
 	Integer migrationThreshold;
@@ -37,15 +37,21 @@ public class Algorithm {
 	public void printHostsAndVMs() throws RemoteException{
 		Folder rootFolder = si.getRootFolder();
 		ManagedEntity[] mes = new InventoryNavigator(rootFolder).searchManagedEntities("HostSystem");
+		
 		for(int i = 0; i < mes.length; i++){
 			HostSystem hs = (HostSystem)mes[i];
 			System.out.println("Host: " + hs.getName() + ", <<CPU usage = " + getHostCpuUsagePecentage(hs) + "% - " +
 										"Memory usage = " + getHostMemoryUsagePecentage(hs) + "%>>");
 			VirtualMachine[] vms = hs.getVms();
 			for(int j =0 ;j < vms.length; j++){
-				System.out.println("\tVM " + j + ": <" + vms[j].getName() + "> - Power state: " + vms[j].getRuntime().getPowerState());
+				int numOfCores = hs.getSummary().getHardware().getNumCpuCores();
+				int cpuMhz = hs.getSummary().getHardware().getCpuMhz();
+				int usedCpuMhz = vms[j].getSummary().getQuickStats().getOverallCpuUsage();
+				double percent = (usedCpuMhz / (double)(numOfCores * cpuMhz)) * 100;
+				DecimalFormat df = new DecimalFormat("####0.00");
+				System.out.println("\tVM " + j + ": <" + vms[j].getName() + "> - Power state: " + vms[j].getRuntime().getPowerState()
+						+ " CPU Usage: " + Double.valueOf(df.format(percent)));
 			}
-	
 			System.out.println();
 		}
 	}
@@ -80,6 +86,23 @@ public class Algorithm {
 		migrationThreshold = scanner.nextInt();
 	}
 	
+	private double calculateSampleSD(double[] a){
+		if(a.length < 2){
+			return 0;
+		}
+		double average = 0;
+		for(int i = 0; i < a.length; i++){
+			average += a[i];
+		}
+		average /= a.length;
+		double t = 0;
+		for(int i = 0; i < a.length; i++){
+			t += ((a[i] - average) * (a[i] - average));
+		}
+		return Math.sqrt(t/(a.length - 1));
+		
+	}
+	
 	private void printDRSClusters() throws RemoteException{
 		Folder rootFolder = si.getRootFolder();
 		ManagedEntity[] mes = new InventoryNavigator(rootFolder).searchManagedEntities("ClusterComputeResource");
@@ -90,6 +113,14 @@ public class Algorithm {
 			System.out.println("\tCluster's current balance: " + ccrs.getCurrentBalance());
 			System.out.println("\tCluster's target balance: " + ccrs.getTargetBalance());
 			System.out.println("\tCluster's number of vMotions: " + ccrs.getNumVmotions());
+			HostSystem hss[] = cluster.getHosts();
+			double[] hostCPUUsage = new double[hss.length];
+			for(int j = 0; j < hss.length; j++){
+				hostCPUUsage[j] = getHostCpuUsagePecentage(hss[j]);
+				hostCPUUsage[j] /= 100;
+				System.out.println("Host cpu usage: " + hostCPUUsage[j]);
+			}
+			System.out.println("Calculated sd: " + calculateSampleSD(hostCPUUsage));
 		}
 	}
 	
