@@ -125,14 +125,18 @@ public class Algorithm{
 	}
 	
 	private void run() throws RemoteException, InterruptedException {
+		DRSRunnable drsRunnable = new DRSRunnable(si);
+		Thread drsThread = new Thread(drsRunnable);
 		Integer choice;
 		Scanner scanner = new Scanner(System.in);
-		do{
+		do{ 
 			System.out.println("0. Print all hosts and their respective virtual machines\n"
 					+ "1. Migrate a virtual machine\n"
 					+ "2. Set cpu threshold\n"
 					+ "3. Set migration threshold\n"
-					+ "4. Get all clusters");
+					+ "4. Get all clusters\n"
+					+ "5. Start DRS\n"
+					+ "6. Stop DRS");
 			choice = scanner.nextInt();
 			switch(choice){
 			case 0:
@@ -149,6 +153,12 @@ public class Algorithm{
 				break;
 			case 4:
 				printDRSClusters();
+				break;
+			case 5:
+				drsThread.start();
+				break;
+			case 6:
+				drsRunnable.terminate();
 				break;
 			default:
 				break;
