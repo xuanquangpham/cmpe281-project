@@ -4,6 +4,10 @@ Proposal: https://docs.google.com/document/d/1dlsoB8p5n03br0nUwz1BRbgCEcTPXxZHEV
 
 Tasks: https://docs.google.com/spreadsheets/d/1Hs2aplWfruGNG0_unR-fIykb7AY3VIQEcdvdisGIn5o/edit?usp=sharing
 
+Report: https://docs.google.com/document/d/1bB2ZG6sae9Svw6-rMtAprLLmCLDP5rtmou8joAQ9GX8/edit?usp=sharing
+
+Presentation Slides: https://docs.google.com/presentation/d/1lZmctbut83iI1uYHruZKBchqlsZI11HvFvp_J4l6_Ro/edit?usp=sharing
+
 Summary: "I assume your plan is to install ESXi as a VM on CMPE vCenter server env, and you have two such "ESXi VMs".
 - On top of each ESXi VM, you will install 3~5 VMs.
 - to enable vMotion, you need to install vCenter server (another VM) on top of your ESXi VM."
