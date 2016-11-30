@@ -14,6 +14,7 @@ public class DRSRunnable implements Runnable{
 	Integer migrationThreshold;
 	double targetBalance;
 	double currentBalance;
+	double[][] tBM;
 
 	public DRSRunnable(ServiceInstance si) throws RemoteException{
 		this.si = si;
@@ -22,8 +23,37 @@ public class DRSRunnable implements Runnable{
 		if(mes.length > 0){
 			cluster = (ClusterComputeResource)mes[0];
 		}
-		migrationThreshold = 5;
-		targetBalance = 0.010;
+		createTargetBalanceMatrix();
+		setMigrationThreshold(5);
+	}
+	
+	private void createTargetBalanceMatrix(){
+		tBM = new double[3][];
+		for(int i = 0; i < 3; i++){
+			tBM[i] = new double[4];
+		}
+		//migrationThreshold == 3
+		tBM[0][0] = .244; tBM[0][1] = .163; tBM[0][2] = .81; tBM[0][3] = .40;
+		//migrationThreshold == 4
+		tBM[1][0] = .212; tBM[1][1] = .141; tBM[1][2] = .70; tBM[1][3] = .35;	
+		//migrationThreshold == 5
+		tBM[2][0] = .189; tBM[2][1] = .126; tBM[2][2] = .63; tBM[2][3] = .31;	
+	}
+	
+	public void setMigrationThreshold(Integer migrationThreshold){
+		if(migrationThreshold == null)
+			return;
+		this.migrationThreshold = migrationThreshold;
+		setTargetBalance();
+	}
+	
+	private void setTargetBalance(){
+		if(cluster == null)
+			return;
+		int numHost = cluster.getSummary().getNumHosts();
+		if(numHost > 2 && numHost < 6){
+			targetBalance = tBM[numHost -3][migrationThreshold - 2];
+		}
 	}
 	
 	public void run(){
@@ -117,10 +147,24 @@ public class DRSRunnable implements Runnable{
 				hostCPUUsageArray[j] -= vmCPUUsage;
 			}
 		}
-		System.out.println("min SD = " + minSD);
-		System.out.println("Source vm = " + mes[sourceVMIndex].getName());
-		System.out.println("Source Host = " + hss[sourceHostIndex].getName());
-		System.out.println("Target Host = " + hss[targetHostIndex].getName());
+		if(minSD < (currentBalance * .9)){
+			//if the new standard deviation is 10% smaller than the current standard deviation
+			VirtualMachine sourceVM = (VirtualMachine)mes[sourceVMIndex];
+			HostSystem sourceHost = (HostSystem)hss[sourceHostIndex];
+			HostSystem targetHost = (HostSystem)hss[targetHostIndex];
+			System.out.println("min SD = " + minSD);
+			System.out.println("Source vm = " + sourceVM.getName());
+			System.out.println("Source Host = " + sourceHost.getName());
+			System.out.println("Target Host = " + targetHost.getName());
+			ComputeResource cr = (ComputeResource)targetHost.getParent();
+			ResourcePool rp = cr.getResourcePool();
+			try{
+				migrateVM(rp, sourceVM, targetHost);
+			}catch(Exception e){
+				System.err.println(e.getMessage());
+			}
+		}
+		
 	}
 	
 	public HostSystem getHostOfVM(VirtualMachine vm) {
@@ -166,4 +210,31 @@ public class DRSRunnable implements Runnable{
 		DecimalFormat df = new DecimalFormat("####0.00");
 		return Double.valueOf(df.format(percent));
 	}
+	
+	public boolean migrateVM(ResourcePool rp, VirtualMachine vm, HostSystem host) throws VmConfigFault, Timedout, FileFault, InvalidState, InsufficientResourcesFault, MigrationFault, RuntimeFault, RemoteException, InterruptedException
+	{
+		Task task = vm.migrateVM_Task(rp, host,VirtualMachineMovePriority.highPriority, VirtualMachinePowerState.poweredOn);
+	    if(task.waitForTask()==Task.SUCCESS)
+	    {
+	      return true;
+	    }
+	    else
+	    {
+	      TaskInfo info = task.getTaskInfo();
+	      System.out.println(info.getError().getFault());
+	      return false;
+	    }
+	}
+	public boolean checkCompatible(VirtualMachine vm, HostSystem host) throws RuntimeFault, RemoteException
+	{
+		String[] checks = new String[] {"cpu", "software"};
+		HostVMotionCompatibility[] vmcs = si.queryVMotionCompatibility(vm, new HostSystem[]{host},checks );
+		String[] comps = vmcs[0].getCompatibility();
+	    if(checks.length != comps.length)
+	    {
+	      return true;
+	    }
+	    return false;
+	}
+	
 }

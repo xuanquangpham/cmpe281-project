@@ -77,13 +77,14 @@ public class Algorithm{
 	}
 	
 	private void setCPUThreshold(Scanner scanner){
-		System.out.println("Enter cpu threshold: ");
+		System.out.print("Enter cpu threshold: ");
 		cpuThreshold = scanner.nextInt();
 	}
 	
-	private void setMigrationThreshold(Scanner scanner){
+	private void setMigrationThreshold(Scanner scanner, DRSRunnable drsRunnable){
 		System.out.print("Enter migration threshold: [1-5] (1 being more conservative, 5 being more aggressive: ");
 		migrationThreshold = scanner.nextInt();
+		drsRunnable.setMigrationThreshold(migrationThreshold);
 	}
 	
 	private double calculateSampleSD(double[] a){
@@ -136,7 +137,9 @@ public class Algorithm{
 					+ "3. Set migration threshold\n"
 					+ "4. Get all clusters\n"
 					+ "5. Start DRS\n"
-					+ "6. Stop DRS");
+					+ "6. Stop DRS\n"
+					+ "9. Exit");
+			System.out.print(">");
 			choice = scanner.nextInt();
 			switch(choice){
 			case 0:
@@ -149,7 +152,7 @@ public class Algorithm{
 				setCPUThreshold(scanner);
 				break;
 			case 3:
-				setMigrationThreshold(scanner);
+				setMigrationThreshold(scanner, drsRunnable);
 				break;
 			case 4:
 				printDRSClusters();
@@ -172,7 +175,7 @@ public class Algorithm{
 	}
 	
 	public Algorithm(String IP, String login, String password){
-		System.out.println("IP: " + IP);
+		//System.out.println("IP: " + IP);
 		try{
 			si = new ServiceInstance(new URL("https://" + IP + "/sdk"), login, password, true);
 		} catch (RemoteException e){
