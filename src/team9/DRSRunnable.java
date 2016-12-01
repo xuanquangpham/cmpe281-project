@@ -29,7 +29,7 @@ public class DRSRunnable implements Runnable{
 	
 	private void createTargetBalanceMatrix(){
 		tBM = new double[4][];
-		for(int i = 0; i < 4; i++){
+		for(int i = 0; i < 5; i++){
 			tBM[i] = new double[5];
 		}
 		//number of hosts == 2
@@ -40,6 +40,8 @@ public class DRSRunnable implements Runnable{
 		tBM[2][0] = .212; tBM[2][1] = .141; tBM[2][2] = .070; tBM[2][3] = .035;	tBM[2][4] = .010;
 		//number of hosts == 5
 		tBM[3][0] = .189; tBM[3][1] = .126; tBM[3][2] = .063; tBM[3][3] = .031;	tBM[3][4] = .010;
+		//number of hosts > 5
+		tBM[4][0] = .150; tBM[4][1] = .100; tBM[4][2] = .055; tBM[4][3] = .028;	tBM[4][4] = .010;
 	}
 	
 	public void setMigrationThreshold(Integer migrationThreshold){
@@ -59,7 +61,7 @@ public class DRSRunnable implements Runnable{
 		if(numHost > 1 && numHost < 6){
 			targetBalance = tBM[numHost -2][migrationThreshold - 2];
 		}else{
-			targetBalance = tBM[3][migrationThreshold - 2];
+			targetBalance = tBM[4][migrationThreshold - 2];
 		}
 	}
 	
@@ -104,6 +106,9 @@ public class DRSRunnable implements Runnable{
 		//for each vm
 		for(int i =0 ;i < mes.length; i++){
 			VirtualMachine vm = (VirtualMachine)mes[i];
+			if(vm.getRuntime().getPowerState().toString().equals("poweredOff")){
+				continue;
+			}
 			HostSystem sourceHost = getHostOfVM(vm);
 			//System.out.println(sourceHost.getName());
 			//System.out.println("Source Host cpu % " + getHostCpuUsagePecentage(sourceHost));
