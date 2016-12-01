@@ -177,7 +177,7 @@ public class Algorithm{
 	        	}
 	        	else
 	        	{
-	        		System.out.println("fuck you!");
+	        		System.out.println("Failed!");
 	        	}
 	        	vmFromSourceHost = null;
 	        	targetHost = null;
