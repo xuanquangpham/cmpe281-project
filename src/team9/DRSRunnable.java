@@ -28,16 +28,18 @@ public class DRSRunnable implements Runnable{
 	}
 	
 	private void createTargetBalanceMatrix(){
-		tBM = new double[3][];
-		for(int i = 0; i < 3; i++){
+		tBM = new double[4][];
+		for(int i = 0; i < 4; i++){
 			tBM[i] = new double[5];
 		}
-		//migrationThreshold == 3
-		tBM[0][0] = .244; tBM[0][1] = .163; tBM[0][2] = .081; tBM[0][3] = .040; tBM[0][4] = .010;
-		//migrationThreshold == 4
-		tBM[1][0] = .212; tBM[1][1] = .141; tBM[1][2] = .070; tBM[1][3] = .035;	tBM[1][4] = .010;
-		//migrationThreshold == 5
-		tBM[2][0] = .189; tBM[2][1] = .126; tBM[2][2] = .063; tBM[2][3] = .031;	tBM[2][4] = .010;
+		//number of hosts == 2
+		tBM[0][0] = .284; tBM[0][1] = .183; tBM[0][2] = .093; tBM[0][3] = .046; tBM[0][4] = .010;
+		//number of hosts == 3
+		tBM[1][0] = .244; tBM[1][1] = .163; tBM[1][2] = .081; tBM[1][3] = .040; tBM[1][4] = .010;
+		//number of hosts == 4
+		tBM[2][0] = .212; tBM[2][1] = .141; tBM[2][2] = .070; tBM[2][3] = .035;	tBM[2][4] = .010;
+		//number of hosts == 5
+		tBM[3][0] = .189; tBM[3][1] = .126; tBM[3][2] = .063; tBM[3][3] = .031;	tBM[3][4] = .010;
 	}
 	
 	public void setMigrationThreshold(Integer migrationThreshold){
@@ -51,25 +53,30 @@ public class DRSRunnable implements Runnable{
 		if(cluster == null)
 			return;
 		int numHost = cluster.getSummary().getNumHosts();
-		if(numHost > 2 && numHost < 6){
-			targetBalance = tBM[numHost -3][migrationThreshold - 2];
+		if(numHost == 0){
+			targetBalance = 100;
+		}
+		if(numHost > 1 && numHost < 6){
+			targetBalance = tBM[numHost -2][migrationThreshold - 2];
+		}else{
+			targetBalance = tBM[3][migrationThreshold - 2];
 		}
 	}
 	
 	public void run(){
 		if(cluster == null){
-			System.err.println("There are no drs clusters");
+			System.err.println("\tThere are no drs clusters");
 			return;
 		}
 		if(running == true){
-			System.err.println("DRS is already running");
+			System.err.println("\tDRS is already running");
 			return;
 		}
 		running = true;
 		while(running == true){
 			try{
 				currentBalance = calculateCurrentBalance();
-				System.out.println("Current Balance: " + currentBalance + "\tTarget Balance: " + targetBalance);
+				System.out.println("\tCurrent Balance: " + currentBalance + "\tTarget Balance: " + targetBalance);
 				if(currentBalance > targetBalance){
 					getBestMove();
 				}
@@ -143,19 +150,19 @@ public class DRSRunnable implements Runnable{
 					sourceHostIndex = currentHostIndex;
 					targetHostIndex = j;
 				}
-				System.out.println(hypotheticalBalance);
+				System.out.println("\tPossible balance by migrating vm: " + hypotheticalBalance);
 				hostCPUUsageArray[j] -= vmCPUUsage;
 			}
 		}
 		if(minSD < (currentBalance * .85) && minSD > (currentBalance * .25)){
-			//if the new standard deviation is 10% smaller than the current standard deviation
+			//if the new standard deviation is 15% smaller than the current standard deviation
 			VirtualMachine sourceVM = (VirtualMachine)mes[sourceVMIndex];
 			HostSystem sourceHost = (HostSystem)hss[sourceHostIndex];
 			HostSystem targetHost = (HostSystem)hss[targetHostIndex];
-			System.out.println("min SD = " + minSD);
-			System.out.println("Source vm = " + sourceVM.getName());
-			System.out.println("Source Host = " + sourceHost.getName());
-			System.out.println("Target Host = " + targetHost.getName());
+			System.out.println("\tmin SD = " + minSD);
+			System.out.println("\tSource vm = " + sourceVM.getName());
+			System.out.println("\tSource Host = " + sourceHost.getName());
+			System.out.println("\tTarget Host = " + targetHost.getName());
 			ComputeResource cr = (ComputeResource)targetHost.getParent();
 			ResourcePool rp = cr.getResourcePool();
 			

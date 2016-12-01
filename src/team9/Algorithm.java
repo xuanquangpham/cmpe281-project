@@ -126,8 +126,7 @@ public class Algorithm{
 	}
 	
 	private void run() throws RemoteException, InterruptedException {
-		DRSRunnable drsRunnable = new DRSRunnable(si);
-		Thread drsThread = new Thread(drsRunnable);
+		DRSRunnable drsRunnable = null;
 		Integer choice;
 		Scanner scanner = new Scanner(System.in);
 		do{ 
@@ -152,13 +151,23 @@ public class Algorithm{
 				setCPUThreshold(scanner);
 				break;
 			case 3:
-				setMigrationThreshold(scanner, drsRunnable);
+				if(drsRunnable != null)
+					setMigrationThreshold(scanner, drsRunnable);
 				break;
 			case 4:
 				printDRSClusters();
 				break;
 			case 5:
+				drsRunnable = new DRSRunnable(si);
+				Thread drsThread = new Thread(drsRunnable);
 				drsThread.start();
+				System.out.println("Enter q to stop DRS");
+				String s;
+				do{
+					s = scanner.nextLine();
+				}while(!s.equals("q"));
+				drsRunnable.terminate();
+				drsThread.join();
 				break;
 			case 6:
 				drsRunnable.terminate();
