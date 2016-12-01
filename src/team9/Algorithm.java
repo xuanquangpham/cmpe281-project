@@ -1,14 +1,16 @@
 package team9;
 
+
 import java.net.MalformedURLException;
 import java.net.URL;
 
 import com.vmware.vim25.*;
 import com.vmware.vim25.mo.*;
+
 import java.rmi.RemoteException;
 import java.text.DecimalFormat;
 import java.util.Scanner;
-
+import com.vmware.vim25.mo.util.MorUtil;
 
 public class Algorithm{
 	ServiceInstance si;
@@ -40,7 +42,8 @@ public class Algorithm{
 		
 		for(int i = 0; i < mes.length; i++){
 			HostSystem hs = (HostSystem)mes[i];
-			System.out.println("Host: " + hs.getName() + ", <<CPU usage = " + getHostCpuUsagePecentage(hs) + "% - " +
+			int hostUsedCpuMhz = hs.getSummary().getQuickStats().getOverallCpuUsage();
+			System.out.println("Host: " + hs.getName() + ", <<CPU usage = " + getHostCpuUsagePercentage(hs, hostUsedCpuMhz) + "% - " +
 										"Memory usage = " + getHostMemoryUsagePecentage(hs) + "%>>");
 			VirtualMachine[] vms = hs.getVms();
 			for(int j =0 ;j < vms.length; j++){
@@ -56,10 +59,9 @@ public class Algorithm{
 		}
 	}
 	
-	public double getHostCpuUsagePecentage(HostSystem hs) {
+	public double getHostCpuUsagePercentage(HostSystem hs, int usedCpuMhz) {
 		int numOfCores = hs.getSummary().getHardware().getNumCpuCores();
 		int cpuMhz = hs.getSummary().getHardware().getCpuMhz();
-		int usedCpuMhz = hs.getSummary().getQuickStats().getOverallCpuUsage();
 		double percent = (usedCpuMhz / (double)(numOfCores * cpuMhz)) * 100;
 		
 		DecimalFormat df = new DecimalFormat("####0.00");
@@ -103,7 +105,7 @@ public class Algorithm{
 		
 	}
 	
-	private void printDRSClusters() throws RemoteException{
+	private void printDRSClusters() throws RemoteException, InterruptedException{
 		Folder rootFolder = si.getRootFolder();
 		ManagedEntity[] mes = new InventoryNavigator(rootFolder).searchManagedEntities("ClusterComputeResource");
 		for(int i = 0; i < mes.length; i++){
@@ -116,16 +118,87 @@ public class Algorithm{
 			HostSystem hss[] = cluster.getHosts();
 			double[] hostCPUUsage = new double[hss.length];
 			for(int j = 0; j < hss.length; j++){
-				hostCPUUsage[j] = getHostCpuUsagePecentage(hss[j]);
+				int usedCpuMhz = hss[j].getSummary().getQuickStats().getOverallCpuUsage();
+				hostCPUUsage[j] = getHostCpuUsagePercentage(hss[j], usedCpuMhz);
 				hostCPUUsage[j] /= 100;
 				System.out.println("Host cpu usage: " + hostCPUUsage[j]);
 			}
-			System.out.println("Calculated sd: " + calculateSampleSD(hostCPUUsage));
+			double currSD = calculateSampleSD(hostCPUUsage);
+			System.out.println("Calculated sd: " + currSD);
+			
+			loadBalancing(hss, hostCPUUsage, currSD, 0.01);
+			
 		}
 	}
+	private void loadBalancing(HostSystem hosts[], double[] hostCPUUsage, double currSD, double targetSD) throws InvalidProperty, RuntimeFault, RemoteException, InterruptedException {
+		Folder rootFolder = si.getRootFolder();
+		ResourcePool rp = (ResourcePool) new InventoryNavigator(rootFolder).searchManagedEntity("ResourcePool", "Resources"); 
+		double smallestSD = currSD;
+		HostSystem sourceHost = null;
+		HostSystem targetHost = null;
+		VirtualMachine vmFromSourceHost = null;
+		while (smallestSD > targetSD) {
+			ManagedEntity[] mes = new InventoryNavigator(rootFolder).searchManagedEntities("VirtualMachine");
+	        for (ManagedEntity me: mes) {
+				 VirtualMachine vm = (VirtualMachine) me;
+				 if (vm.getRuntime().getPowerState().equals(VirtualMachinePowerState.poweredOn)) {
+					 sourceHost = (HostSystem) (HostSystem) MorUtil.createExactManagedEntity(si.getServerConnection(), vm.getRuntime().getHost()); 
+					 String sourceHostName = sourceHost.getName();
+					 System.out.println("VM name: " + vm.getName() + " Host: " + sourceHostName);
+					 int sourceHostIndex = getIndex(hosts, sourceHostName);
+
+					 for (int i = 0; i < hosts.length; i++ ) {
+						 int hostUsedCpuMhz = hosts[i].getSummary().getQuickStats().getOverallCpuUsage();
+						 int sourceHostUsedCpuMhz = sourceHost.getSummary().getQuickStats().getOverallCpuUsage();
+						 if (i != sourceHostIndex && getHostCpuUsagePercentage(hosts[i], hostUsedCpuMhz) < getHostCpuUsagePercentage(sourceHost,sourceHostUsedCpuMhz)) {
+							 int newTargetHostUsage = hosts[i].getSummary().getQuickStats().getOverallCpuUsage() + vm.getSummary().getQuickStats().getOverallCpuUsage();
+							 int newSourceHostUsage = sourceHost.getSummary().getQuickStats().getOverallCpuUsage() - vm.getSummary().getQuickStats().getOverallCpuUsage();
+							 hostCPUUsage[i] = getHostCpuUsagePercentage(hosts[i], newTargetHostUsage)/100;
+							 hostCPUUsage[sourceHostIndex] = getHostCpuUsagePercentage(sourceHost, newSourceHostUsage)/100;
+							 double newSD = calculateSampleSD(hostCPUUsage);
+							 System.out.println("newSD: " + newSD);
+							 if (newSD < smallestSD) {
+								 smallestSD = newSD;
+								 vmFromSourceHost = vm;
+								 targetHost = hosts[i];
+							 }
+						 }
+					 }
+				 }
+	        }
+	        System.out.println("Smallest: " + smallestSD);
+	        if (vmFromSourceHost == null || targetHost == null) {
+	        	break;
+	        }
+	        else {
+	        	if( migrateVM(rp, vmFromSourceHost, targetHost))
+	        	{
+	        		System.out.println("Migrated VM: " + vmFromSourceHost.getName() + " to Host: " + targetHost.getName());
+	        	}
+	        	else
+	        	{
+	        		System.out.println("fuck you!");
+	        	}
+	        	vmFromSourceHost = null;
+	        	targetHost = null;
+	        }
+		}
+        
+	}
 	
+	public static int getIndex(HostSystem[] hosts, String hostName) {
+		int i = 0;
+		for (i = 0; i < hosts.length; i++) {
+			if (hosts[i].getName().equalsIgnoreCase(hostName)) {
+				break;
+			}
+		}
+		return i;
+	}
+
 	private void run() throws RemoteException, InterruptedException {
 		Integer choice;
+		
 		Scanner scanner = new Scanner(System.in);
 		do{
 			System.out.println("0. Print all hosts and their respective virtual machines\n"
@@ -184,6 +257,7 @@ public class Algorithm{
 	
 	public boolean migrateVM(ResourcePool rp, VirtualMachine vm, HostSystem host) throws VmConfigFault, Timedout, FileFault, InvalidState, InsufficientResourcesFault, MigrationFault, RuntimeFault, RemoteException, InterruptedException
 	{
+		
 		Task task = vm.migrateVM_Task(rp, host,VirtualMachineMovePriority.highPriority, VirtualMachinePowerState.poweredOn);
 	    if(task.waitForTask()==Task.SUCCESS)
 	    {
