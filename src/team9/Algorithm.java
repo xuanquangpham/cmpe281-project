@@ -12,7 +12,6 @@ import java.util.Scanner;
 
 public class Algorithm{
 	ServiceInstance si;
-	Integer cpuThreshold;
 	Integer migrationThreshold;
 	
 	private void migrate(Scanner scanner) throws RemoteException, InterruptedException{
@@ -76,13 +75,9 @@ public class Algorithm{
 		return Double.valueOf(df.format(percent));
 	}
 	
-	private void setCPUThreshold(Scanner scanner){
-		System.out.print("Enter cpu threshold: ");
-		cpuThreshold = scanner.nextInt();
-	}
 	
 	private void setMigrationThreshold(Scanner scanner, DRSRunnable drsRunnable){
-		System.out.print("Enter migration threshold: [1-5] (1 being more conservative, 5 being more aggressive: ");
+		System.out.print("Enter migration threshold: [1-6] (1 being more conservative, 6 being more aggressive: ");
 		migrationThreshold = scanner.nextInt();
 		drsRunnable.setMigrationThreshold(migrationThreshold);
 	}
@@ -110,16 +105,12 @@ public class Algorithm{
 		for(int i = 0; i < mes.length; i++){
 			ClusterComputeResource cluster = (ClusterComputeResource)mes[i];
 			System.out.println("Cluster[" + i + "]: " + cluster.getName());
-			ClusterComputeResourceSummary ccrs = (ClusterComputeResourceSummary)cluster.getSummary();
-			System.out.println("\tCluster's current balance: " + ccrs.getCurrentBalance());
-			System.out.println("\tCluster's target balance: " + ccrs.getTargetBalance());
-			System.out.println("\tCluster's number of vMotions: " + ccrs.getNumVmotions());
 			HostSystem hss[] = cluster.getHosts();
 			double[] hostCPUUsage = new double[hss.length];
 			for(int j = 0; j < hss.length; j++){
 				hostCPUUsage[j] = getHostCpuUsagePecentage(hss[j]);
 				hostCPUUsage[j] /= 1000;
-				System.out.println("Host cpu usage: " + hostCPUUsage[j]);
+				System.out.println("Host[" + j + "] cpu usage: " + hostCPUUsage[j]);
 			}
 			System.out.println("Calculated sd: " + calculateSampleSD(hostCPUUsage));
 		}
@@ -130,32 +121,27 @@ public class Algorithm{
 		Integer choice;
 		Scanner scanner = new Scanner(System.in);
 		do{ 
-			System.out.println("0. Print all hosts and their respective virtual machines\n"
-					+ "1. Migrate a virtual machine\n"
-					+ "2. Set cpu threshold\n"
-					+ "3. Set migration threshold\n"
-					+ "4. Get all clusters\n"
+			System.out.println("1. Print all hosts and their respective virtual machines\n"
+					+ "2. Migrate a virtual machine\n"
+					+ "3. Get all clusters\n"
+					+ "4. Set migration threshold\n"
 					+ "5. Start DRS\n"
-					+ "6. Stop DRS\n"
-					+ "9. Exit");
+					+ "0. Exit");
 			System.out.print(">");
 			choice = scanner.nextInt();
 			switch(choice){
-			case 0:
+			case 1:
 				printHostsAndVMs();
 				break;
-			case 1:
+			case 2:
 				migrate(scanner);
 				break;
-			case 2:
-				setCPUThreshold(scanner);
-				break;
 			case 3:
-				if(drsRunnable != null)
-					setMigrationThreshold(scanner, drsRunnable);
+				printDRSClusters();
 				break;
 			case 4:
-				printDRSClusters();
+				if(drsRunnable != null)
+					setMigrationThreshold(scanner, drsRunnable);
 				break;
 			case 5:
 				drsRunnable = new DRSRunnable(si);
@@ -169,13 +155,10 @@ public class Algorithm{
 				drsRunnable.terminate();
 				drsThread.join();
 				break;
-			case 6:
-				drsRunnable.terminate();
-				break;
 			default:
 				break;
 			}
-		}while(choice != 9);
+		}while(choice != 0);
 		scanner.close();
 	}
 	
