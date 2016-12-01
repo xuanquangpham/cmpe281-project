@@ -24,20 +24,20 @@ public class DRSRunnable implements Runnable{
 			cluster = (ClusterComputeResource)mes[0];
 		}
 		createTargetBalanceMatrix();
-		setMigrationThreshold(5);
+		setMigrationThreshold(6);
 	}
 	
 	private void createTargetBalanceMatrix(){
 		tBM = new double[3][];
 		for(int i = 0; i < 3; i++){
-			tBM[i] = new double[4];
+			tBM[i] = new double[5];
 		}
 		//migrationThreshold == 3
-		tBM[0][0] = .244; tBM[0][1] = .163; tBM[0][2] = .81; tBM[0][3] = .40;
+		tBM[0][0] = .244; tBM[0][1] = .163; tBM[0][2] = .081; tBM[0][3] = .040; tBM[0][4] = .010;
 		//migrationThreshold == 4
-		tBM[1][0] = .212; tBM[1][1] = .141; tBM[1][2] = .70; tBM[1][3] = .35;	
+		tBM[1][0] = .212; tBM[1][1] = .141; tBM[1][2] = .070; tBM[1][3] = .035;	tBM[1][4] = .010;
 		//migrationThreshold == 5
-		tBM[2][0] = .189; tBM[2][1] = .126; tBM[2][2] = .63; tBM[2][3] = .31;	
+		tBM[2][0] = .189; tBM[2][1] = .126; tBM[2][2] = .063; tBM[2][3] = .031;	tBM[2][4] = .010;
 	}
 	
 	public void setMigrationThreshold(Integer migrationThreshold){
@@ -73,7 +73,7 @@ public class DRSRunnable implements Runnable{
 				if(currentBalance > targetBalance){
 					getBestMove();
 				}
-				Thread.sleep(5000);
+				Thread.sleep(10000);
 			}catch(RemoteException e){
 				System.err.println(e.getMessage());
 			}catch(InterruptedException e){
@@ -132,7 +132,7 @@ public class DRSRunnable implements Runnable{
 					HostSystem temp = (HostSystem)hss[k];
 					numOfCores = temp.getSummary().getHardware().getNumCpuCores();
 					cpuMhz = temp.getSummary().getHardware().getCpuMhz();
-					hostCPUUsageArrayPercent[k] = hostCPUUsageArray[k]/ (double)(numOfCores * cpuMhz);
+					hostCPUUsageArrayPercent[k] = hostCPUUsageArray[k]/ (double)(numOfCores * cpuMhz)/10;
 					//System.out.println("\t " + hostCPUUsageArray[k]);
 					//System.out.println("\t% " + hostCPUUsageArrayPercent[k]);
 				}
@@ -147,7 +147,7 @@ public class DRSRunnable implements Runnable{
 				hostCPUUsageArray[j] -= vmCPUUsage;
 			}
 		}
-		if(minSD < (currentBalance * .9)){
+		if(minSD < (currentBalance * .85) && minSD > (currentBalance * .25)){
 			//if the new standard deviation is 10% smaller than the current standard deviation
 			VirtualMachine sourceVM = (VirtualMachine)mes[sourceVMIndex];
 			HostSystem sourceHost = (HostSystem)hss[sourceHostIndex];
@@ -158,11 +158,15 @@ public class DRSRunnable implements Runnable{
 			System.out.println("Target Host = " + targetHost.getName());
 			ComputeResource cr = (ComputeResource)targetHost.getParent();
 			ResourcePool rp = cr.getResourcePool();
+			
 			try{
+				System.out.println("\tMigrating");
 				migrateVM(rp, sourceVM, targetHost);
+				Thread.sleep(10000);
 			}catch(Exception e){
 				System.err.println(e.getMessage());
 			}
+			
 		}
 		
 	}
@@ -178,7 +182,7 @@ public class DRSRunnable implements Runnable{
 		double[] hostCPUUsage = new double[hss.length];
 		for(int j = 0; j < hss.length; j++){
 			hostCPUUsage[j] = getHostCpuUsagePecentage(hss[j]);
-			hostCPUUsage[j] /= 100;
+			hostCPUUsage[j] /= 1000;
 		}
 		hostCurrentBalance = calculateSampleSD(hostCPUUsage);
 		return hostCurrentBalance;

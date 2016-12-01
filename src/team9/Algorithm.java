@@ -118,7 +118,7 @@ public class Algorithm{
 			double[] hostCPUUsage = new double[hss.length];
 			for(int j = 0; j < hss.length; j++){
 				hostCPUUsage[j] = getHostCpuUsagePecentage(hss[j]);
-				hostCPUUsage[j] /= 100;
+				hostCPUUsage[j] /= 1000;
 				System.out.println("Host cpu usage: " + hostCPUUsage[j]);
 			}
 			System.out.println("Calculated sd: " + calculateSampleSD(hostCPUUsage));
