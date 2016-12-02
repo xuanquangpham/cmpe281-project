@@ -1,6 +1,8 @@
 package team9;
 import java.rmi.RemoteException;
 import java.text.DecimalFormat;
+import java.util.Calendar;
+import java.util.Hashtable;
 
 import com.vmware.vim25.*;
 import com.vmware.vim25.mo.*;
@@ -15,6 +17,8 @@ public class DRSRunnable implements Runnable{
 	double targetBalance;
 	double currentBalance;
 	double[][] tBM;
+	HostSystem hss[];
+	Hashtable<VirtualMachine, HostSystem> tbVmsHosts;
 
 	public DRSRunnable(ServiceInstance si) throws RemoteException{
 		this.si = si;
@@ -23,12 +27,128 @@ public class DRSRunnable implements Runnable{
 		if(mes.length > 0){
 			cluster = (ClusterComputeResource)mes[0];
 		}
+		hss = cluster.getHosts();
+		tbVmsHosts = new Hashtable<VirtualMachine, HostSystem>();
+		
 		createTargetBalanceMatrix();
 		setMigrationThreshold(6);
 	}
 	
+	public void refreshVmsHostsActive() throws RemoteException {
+		
+		for (HostSystem hs : hss) {
+			VirtualMachine vms[] = hs.getVms();
+			
+			for (VirtualMachine vm : vms) {
+				if (tbVmsHosts.get(vm) == null) {
+					tbVmsHosts.put(vm, hs);
+				}
+			}
+		}
+	}
+	
+	public void findBestHostForNewVM() {
+		//check VM Name input
+		if (Algorithm.vmNamePowerOn == null) return;
+		
+		//check if VM already ON
+		VirtualMachine newVM = getVMByName(Algorithm.vmNamePowerOn);
+		if (newVM == null || newVM.getSummary().getRuntime().getPowerState() == VirtualMachinePowerState.poweredOn) {
+			System.out.println("The VM " + Algorithm.vmNamePowerOn + " is not in the cluster, or is already ON");
+			return;
+		}
+		
+		//check current host	
+		boolean flag = false;
+		HostSystem curHost = getHostOfVM(newVM);
+		if (isOkayToMove(getHostCpuRemaining(curHost), getVMCpuCapacity(newVM))) {
+			moveVM(curHost, newVM);
+			flag = true;
+		} else {
+			for (HostSystem hs : hss) {
+				if (!hs.getName().equals(curHost.getName())) {
+					if (isOkayToMove(getHostCpuRemaining(hs), getVMCpuCapacity(newVM))) {
+						moveVM(hs, newVM);
+						flag = true;
+						break;
+					}
+				}
+			}
+		}
+		if (!flag) {
+			System.out.println("Sorry!! We cannot find a host to can fully provisioning this VM\n"
+					+ "Please try again later.");
+			Algorithm.vmNamePowerOn = null;
+		}
+	}
+	
+	// turn on the VM
+	public static void turnOnVM(VirtualMachine vm) throws Exception {
+		if (vm.getRuntime().powerState == VirtualMachinePowerState.poweredOn) {
+			System.out.println("Power on VM: status = The attempted operation cannot be performed in the current state (Powered on)");
+		} else {
+			Task task = vm.powerOnVM_Task(null);
+			if (task.waitForTask().equals(Task.SUCCESS)) {
+				Algorithm.vmNamePowerOn = null;
+				System.out.println("Power on VM: status = success");
+			}
+        }
+	}
+	
+	//migrate VM to suitable host
+	public void moveVM(HostSystem targetHost, VirtualMachine sourceVM) {
+		ComputeResource cr = (ComputeResource)targetHost.getParent();
+		ResourcePool rp = cr.getResourcePool();
+		
+		try{
+			System.out.println("\tMigrating");
+			turnOnVM(sourceVM);
+			migrateVM(rp, sourceVM, targetHost);
+			Thread.sleep(10000);
+		}catch(Exception e){
+			System.err.println(e.getMessage());
+		}
+	}
+	
+	public VirtualMachine getVMByName(String name) {
+		try {
+			for (HostSystem hs : hss) {
+				VirtualMachine vms[] = hs.getVms();
+				for (VirtualMachine vm : vms) {
+					if (vm.getName().equals(name)) {
+						return vm;
+					}
+				}
+				
+			}
+		} catch (Exception e) {
+			System.err.println(e.getMessage());
+		}
+		return null;
+	}
+	
+	public boolean isOkayToMove(int hostRemaining, int vmCapacity) {
+		return hostRemaining > vmCapacity;
+	}
+	
+	public int getHostCpuRemaining(HostSystem hs) {
+		int numOfCores = hs.getSummary().getHardware().getNumCpuCores();
+		int cpuMhz = hs.getSummary().getHardware().getCpuMhz();
+		
+		int usedCpuMhz = hs.getSummary().getQuickStats().getOverallCpuUsage();
+		
+		return (numOfCores * cpuMhz) - usedCpuMhz;
+	}
+	
+	public int getVMCpuCapacity(VirtualMachine vm) {
+		HostSystem hs = getHostOfVM(vm);
+		int cpuMhz = hs.getSummary().getHardware().getCpuMhz();
+		int noCores = vm.getSummary().getConfig().getNumCpu();
+		return cpuMhz * noCores;
+	}
+	
 	private void createTargetBalanceMatrix(){
-		tBM = new double[4][];
+		tBM = new double[5][];
 		for(int i = 0; i < 5; i++){
 			tBM[i] = new double[5];
 		}
@@ -83,6 +203,7 @@ public class DRSRunnable implements Runnable{
 					getBestMove();
 				}
 				Thread.sleep(10000);
+				findBestHostForNewVM();
 			}catch(RemoteException e){
 				System.err.println(e.getMessage());
 			}catch(InterruptedException e){
@@ -254,3 +375,4 @@ public class DRSRunnable implements Runnable{
 	}
 	
 }
+
