@@ -56,10 +56,11 @@ public class Algorithm{
 		}
 	}
 	
-	public double getHostCpuUsagePecentage(HostSystem hs) {
+	public double getHostCpuUsagePecentage(HostSystem hs) throws RemoteException{
 		int numOfCores = hs.getSummary().getHardware().getNumCpuCores();
 		int cpuMhz = hs.getSummary().getHardware().getCpuMhz();
-		int usedCpuMhz = hs.getSummary().getQuickStats().getOverallCpuUsage();
+		//int usedCpuMhz = hs.getSummary().getQuickStats().getOverallCpuUsage();
+		int usedCpuMhz = hostCPUUsageByVM(hs);
 		double percent = (usedCpuMhz / (double)(numOfCores * cpuMhz)) * 100;
 		
 		DecimalFormat df = new DecimalFormat("####0.00");
@@ -191,7 +192,7 @@ public class Algorithm{
 	}
 	
 	public static void main(String[] args) throws Exception {
-		Algorithm algorithm = new Algorithm(args[0], args[1], args[2]);
+		Algorithm algorithm = new Algorithm("130.65.159.177","root","cmpe-ul4x");
 		algorithm.run();
         algorithm.closeConnection();
 	}
@@ -218,5 +219,17 @@ public class Algorithm{
 	      return true;
 	    }
 	    return false;
+	}
+	
+	public Integer hostCPUUsageByVM(HostSystem hs) throws RemoteException{
+		if(hs == null){
+			return 0;
+		}
+		Integer cpuUsage = 0;
+		VirtualMachine[] vms = hs.getVms();
+		for(int i =0; i < vms.length; i++){
+			cpuUsage += vms[i].getSummary().getQuickStats().getOverallCpuUsage();
+		}
+		return cpuUsage;
 	}
 }

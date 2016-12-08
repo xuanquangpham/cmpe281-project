@@ -104,7 +104,7 @@ public class DRSRunnable implements Runnable{
 			System.out.println("\tMigrating");
 			turnOnVM(sourceVM);
 			migrateVM(rp, sourceVM, targetHost);
-			Thread.sleep(10000);
+			Thread.sleep(30000);
 		}catch(Exception e){
 			System.err.println(e.getMessage());
 		}
@@ -235,7 +235,8 @@ public class DRSRunnable implements Runnable{
 			//System.out.println("Source Host cpu % " + getHostCpuUsagePecentage(sourceHost));
 			int vmCPUUsage = vm.getSummary().getQuickStats().getOverallCpuUsage();
 			//System.out.println("VM cpu usage" + vmCPUUsage);
-			int sourceHostCPUUsage = sourceHost.getSummary().getQuickStats().getOverallCpuUsage();
+			//int sourceHostCPUUsage = sourceHost.getSummary().getQuickStats().getOverallCpuUsage();
+			int sourceHostCPUUsage = hostCPUUsageByVM(sourceHost);
 			double[] hostCPUUsageArray = new double[hss.length];
 			
 			int numOfCores = sourceHost.getSummary().getHardware().getNumCpuCores();
@@ -251,7 +252,8 @@ public class DRSRunnable implements Runnable{
 					hostCPUUsageArray[j] = sourceHostCPUUsage - vmCPUUsage;
 					continue;
 				}
-				hostCPUUsageArray[j] = hs.getSummary().getQuickStats().getOverallCpuUsage();
+				//hostCPUUsageArray[j] = hs.getSummary().getQuickStats().getOverallCpuUsage();
+				hostCPUUsageArray[j] = hostCPUUsageByVM(hs);
 			}
 			
 			for(int j = 0; j < hostCPUUsageArray.length; j++){
@@ -280,7 +282,7 @@ public class DRSRunnable implements Runnable{
 				hostCPUUsageArray[j] -= vmCPUUsage;
 			}
 		}
-		if(minSD < (currentBalance * .85) && minSD > (currentBalance * .25)){
+		if(minSD < (currentBalance * .85)){
 			//if the new standard deviation is 15% smaller than the current standard deviation
 			VirtualMachine sourceVM = (VirtualMachine)mes[sourceVMIndex];
 			HostSystem sourceHost = (HostSystem)hss[sourceHostIndex];
@@ -302,6 +304,18 @@ public class DRSRunnable implements Runnable{
 			
 		}
 		
+	}
+	
+	public Integer hostCPUUsageByVM(HostSystem hs) throws RemoteException{
+		if(hs == null){
+			return 0;
+		}
+		Integer cpuUsage = 0;
+		VirtualMachine[] vms = hs.getVms();
+		for(int i =0; i < vms.length; i++){
+			cpuUsage += vms[i].getSummary().getQuickStats().getOverallCpuUsage();
+		}
+		return cpuUsage;
 	}
 	
 	public HostSystem getHostOfVM(VirtualMachine vm) {
@@ -338,10 +352,11 @@ public class DRSRunnable implements Runnable{
 		
 	}
 	
-	public double getHostCpuUsagePecentage(HostSystem hs) {
+	public double getHostCpuUsagePecentage(HostSystem hs) throws RemoteException {
 		int numOfCores = hs.getSummary().getHardware().getNumCpuCores();
 		int cpuMhz = hs.getSummary().getHardware().getCpuMhz();
-		int usedCpuMhz = hs.getSummary().getQuickStats().getOverallCpuUsage();
+		//int usedCpuMhz = hs.getSummary().getQuickStats().getOverallCpuUsage();
+		int usedCpuMhz = hostCPUUsageByVM(hs);
 		double percent = (usedCpuMhz / (double)(numOfCores * cpuMhz)) * 100;
 		
 		DecimalFormat df = new DecimalFormat("####0.00");
